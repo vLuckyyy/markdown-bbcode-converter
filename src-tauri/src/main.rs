@@ -1,3 +1,6 @@
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use crate::markdown::{
     CodeBlockResolver, HeaderResolver, ImageResolver, LinkResolver, ListResolver,
     markdown_converter::MarkdownConverterBuilder,
@@ -6,23 +9,7 @@ use crate::markdown::markdown_converter::{MarkdownBuilder, MarkdownConverter};
 
 mod markdown;
 
-fn main() {
-    let markdown_text = r#"
-    ## Enhancements
-
-    - Add configurable default home name.
-    - Add option to disable mark as afk.
-    - Add Jail system.
-    - Add private chat api.
-    - Refactor base code of Warp and Teleport system.
-    - Other minor improvements.
-    "#;
-
-    let bbcode = build_converter().convert(markdown_text);
-    println!("{}", bbcode);
-}
-
-fn build_converter() -> MarkdownConverter {
+pub fn build_converter() -> MarkdownConverter {
     let mut builder = MarkdownConverterBuilder::new();
 
     builder.add_resolver(Box::new(HeaderResolver {}));
@@ -32,4 +19,17 @@ fn build_converter() -> MarkdownConverter {
     builder.add_resolver(Box::new(ListResolver {}));
 
     builder.build()
+}
+
+#[tauri::command]
+fn convert_to_bbcode(markdown_text: String) -> String {
+    let converter = build_converter();
+    converter.convert(&markdown_text)
+}
+
+fn main() {
+    tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![convert_to_bbcode])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }
